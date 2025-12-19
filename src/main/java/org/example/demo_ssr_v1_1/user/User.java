@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.sql.Timestamp;
@@ -51,22 +52,46 @@ public class User {
      * 무조건 Role 데이터까지 조인(JOIN)해서 한 번에 가져옵니다.
      * (뷰 렌더링 시 LazyInitializationException 방지 목적)
      */
+    // 리스트는 절대 null이 아니도록 초기화
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id") 
+    @JoinColumn(name = "user_id")
     private List<UserRole> roles = new ArrayList<>();
 
     @CreationTimestamp
     private Timestamp createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false) // null 허용 안 함 (필수)
+    @ColumnDefault("'LOCAL'") // 문자열이므로 작은따옴표 필수!
+    private OAuthProvider provider;
+
     @Builder
     public User(Long id, String username, String password, String email,
-                String profileImage, Timestamp createdAt) {
+                String profileImage, Timestamp createdAt, List<UserRole> roles,
+                OAuthProvider provider) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.email = email;
         this.profileImage = profileImage;
         this.createdAt = createdAt;
+        this.provider = provider;
+
+        // roles가 없거나 비어있으면 -> 'USER' 권한 강제 주입
+        // 빌더로 roles를 안 넣으면 null이 들어오므로 체크해야 함
+        this.roles = (roles != null) ? roles : new ArrayList<>();
+
+        if (this.roles.isEmpty()) {
+            this.roles.add(UserRole.builder().role(Role.USER).build());
+        }
+
+        // provider가 없으면(null) -> 'LOCAL'로 설정
+        if (provider == null) {
+            this.provider = OAuthProvider.LOCAL;
+        } else {
+            this.provider = provider;
+        }
+
     }
 
     // 회원정보 수정 비즈니스 로직 추가
@@ -137,6 +162,28 @@ public class User {
      */
     public String getRoleDisplay() {
         return isAdmin() ? "ADMIN" : "USER";
+    }
+
+    public boolean isLocal() {
+        return this.provider == OAuthProvider.LOCAL;
+    }
+
+    /**
+     * [이미지 경로 반환 로직]
+     * - 소셜 로그인(http로 시작): URL 그대로 반환
+     * - 로컬 로그인(파일명): /images/ 경로를 붙여서 반환
+     * - 이미지 없음: null 반환
+     */
+    public String getProfilePath() {
+        if (this.profileImage == null) {
+            return null;
+        }
+        // http 로 시작하면(소셜 이미지) 그대로 리턴
+        if (this.profileImage.startsWith("http")) {
+            return this.profileImage;
+        }
+        // 아니면(로컬 이미지) 폴더 경로 붙여서 리턴
+        return "/images/" + this.profileImage;
     }
 
 }

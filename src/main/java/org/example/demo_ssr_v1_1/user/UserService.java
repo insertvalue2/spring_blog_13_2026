@@ -322,5 +322,19 @@ public class UserService {
         // 5. 변경된 엔티티 저장 (더티 체킹)
         return userRepository.save(user);
     }
+
+    /**
+     * 사용자명으로 조회 (소셜 로그인용)
+     */
+    @Transactional(readOnly = true)
+    public User 사용자이름조회(String username) {
+        // Optional 처리: 없으면 null 반환
+        return userRepository.findByUsername(username).orElse(null);
+    }
+
+
+    public void 소셜회원가입(User user) {
+        userRepository.save(user);   // 그냥 저장만 하면 됨
+    }
 }
 

@@ -7,17 +7,20 @@
             <!-- 프로필 이미지 표시 -->
             <div class="text-center mb-4">
                 {{#user.profileImage}}
-                    <img src="/images/{{user.profileImage}}" 
+                    <!--  user 엔티티 profilePath 로직 추가  -->
+                    <img src="{{user.profilePath}}"
                          alt="프로필 사진" 
                          class="rounded-circle border" 
                          style="width: 200px; height: 200px; object-fit: cover;">
                     <div class="mt-2">
+                    {{#user.local}}
                         <form action="/user/profile-image/delete" method="post" style="display: inline;">
-                            <button type="submit" class="btn btn-sm btn-danger" 
+                            <button type="submit" class="btn btn-sm btn-danger"
                                     onclick="return confirm('프로필 사진을 삭제하시겠습니까?');">
                                 프로필 사진 삭제
                             </button>
                         </form>
+                    {{/user.local}}
                     </div>
                 {{/user.profileImage}}
                 {{^user.profileImage}}

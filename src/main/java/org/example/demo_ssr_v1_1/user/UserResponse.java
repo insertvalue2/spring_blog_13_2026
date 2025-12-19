@@ -1,6 +1,11 @@
 package org.example.demo_ssr_v1_1.user;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
+import lombok.ToString;
+
+import java.util.Properties;
 
 
 /**
@@ -47,5 +52,35 @@ public class UserResponse {
             this.email = user.getEmail();
         }
     }
+
+    // JSON 형식에 코딩 컨벤션이 스네이크 케이스를 카멜 노테이션으로 할당하라!
+    @JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @Data
+    public static class OAuthToken {
+        private String tokenType;	// 토큰	토큰 타입, bearer로 고정(JWT란 의미)
+        private String accessToken;	// String 사용자 액세스 토큰 값(카카오에 사용자 정보를 요청할 수 있는 인증 토큰)
+        private Integer expiresIn;
+        private String refreshToken;
+        private String refreshTokenExpiresIn;
+
+    }
+
+    @JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @Data
+    public static class KakaoProfile {
+        private Long id;
+        private String connectedAt;
+        private Properties properties;
+    }
+
+
+    @JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @Data
+    public static class Properties {
+        private String nickname;
+        private String profileImage;
+        private String thumbnailImage;
+    }
+
 }
 

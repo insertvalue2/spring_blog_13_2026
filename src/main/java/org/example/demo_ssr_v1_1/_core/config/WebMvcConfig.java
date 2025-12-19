@@ -65,6 +65,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/login",                    // 로그인 화면 및 처리
                         "/join",                     // 회원가입 화면 및 처리
                         "/logout",                   // 로그아웃 (인증된 사용자도 접근 가능)
+                        "/user/kakao",               // 카카오 리다이렉트 URI 제외
                         
                         // 게시글 조회 관련 (인증 없이도 볼 수 있는 페이지)
                         "/board/list",              // 게시글 목록

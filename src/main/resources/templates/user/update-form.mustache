@@ -7,7 +7,7 @@
             <!-- 프로필 이미지 표시 -->
             <div class="text-center mb-4">
                 {{#user.profileImage}}
-                    <img src="/images/{{user.profileImage}}" 
+                    <img src="{{user.profilePath}}"
                          alt="프로필 사진" 
                          class="rounded-circle" 
                          style="width: 150px; height: 150px; object-fit: cover;">
@@ -30,10 +30,18 @@
                     <input type="text" class="form-control" name="username" value="{{user.username}}" readonly>
                     <small class="form-text text-muted">사용자명은 변경할 수 없습니다</small>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">비밀번호</label>
-                    <input type="password" class="form-control" placeholder="새 비밀번호를 입력하세요" name="password" required>
-                </div>
+                {{#user.isLocal}}
+                    <div class="mb-3">
+                        <label class="form-label">비밀번호</label>
+                        <input type="password" class="form-control" placeholder="새 비밀번호를 입력하세요" name="password" required>
+                    </div>
+                {{/user.isLocal}}
+                {{^user.isLocal}}
+                    <div class="mb-3">
+                        <label class="form-label">비밀번호</label>
+                        <input type="text" class="form-control" value="소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다." disabled readonly>
+                    </div>
+                {{/user.isLocal}}
                 <div class="mb-3">
                     <label class="form-label">이메일</label>
                     <input type="email" class="form-control" name="email" value="{{user.email}}" readonly>

@@ -1,45 +1,25 @@
 package org.example.demo_ssr_v1_1.user;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.client.RestTemplate;
 
-/**
- * 사용자 Controller (표현 계층)
- * 
- * 핵심 개념:
- * 1. Controller의 역할:
- *    - HTTP 요청을 받아서 처리
- *    - 요청 데이터 검증 및 파라미터 바인딩
- *    - Service 레이어에 비즈니스 로직 위임
- *    - 응답 데이터를 View에 전달
- * 
- * 2. 계층 구조 (3-Tier Architecture):
- *    Controller (표현 계층) ← 현재 위치
- *      ↓ 요청
- *    Service (비즈니스 계층)
- *      ↓ 요청
- *    Repository (데이터 접근 계층)
- * 
- * 3. @Controller:
- *    - Spring MVC의 컨트롤러로 등록
- *    - @Component의 특수한 형태
- *    - HTTP 요청을 처리하는 클래스임을 명시
- * 
- * 4. @RequiredArgsConstructor:
- *    - final 필드에 대한 생성자를 자동 생성
- *    - 의존성 주입(DI)을 위한 생성자 주입 방식
- *    - @Autowired 대신 생성자 주입을 사용 (권장 방식)
- * 
- * 5. Controller의 책임:
- *    - HTTP 요청/응답 처리
- *    - 세션 관리
- *    - View 이름 반환
- *    - 비즈니스 로직은 Service에 위임
- */
 @RequiredArgsConstructor // DI (의존성 주입)
 @Controller // IoC (제어의 역전)
 public class UserController {
@@ -47,6 +27,183 @@ public class UserController {
     // Service 레이어 주입
     // Controller는 비즈니스 로직을 직접 처리하지 않고 Service에 위임
     private final UserService userService;
+    private final ObjectMapper objectMapper;
+
+    @Value("${oauth.kakao.client-id}")
+    private String kakao_client_id;
+
+    @Value("${tenco.key}") // 임시 비밀번호 키 주입
+    private String tencoKey;
+
+
+    /**
+     * 카카오 로그인 콜백 처리
+     * [흐름] 1. 인가 코드 받기 -> 2. 토큰 발급 요청 -> 3. 사용자 정보 요청 -> 4. 로그인/회원가입 처리
+     */
+    @GetMapping("/user/kakao")
+    //@ResponseBody
+    public String kakaoCallback(@RequestParam(name = "code") String code, HttpSession session) {
+
+        // 1. 인가 코드 확인 (디버깅용)
+        System.out.println("1. Kakao 인가 코드 수신 완료: " + code);
+
+        // -----------------------------------------------------------
+        // 2. 토큰 발급 요청 (POST: https://kauth.kakao.com/oauth/token)
+        // -----------------------------------------------------------
+        RestTemplate tokenRt = new RestTemplate();
+
+        // 2-1. 헤더 생성 (MIME 타입 설정)
+        HttpHeaders tokenHeaders = new HttpHeaders();
+        tokenHeaders.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+        // application/x-www-form-urlencoded 것은 데이터를 key1=value1&key2=value2 형태(HTML Form 태그 방식)로 보내겠다 의미 입니다.
+
+        // 2-2. 바디 생성 (MultiValueMap 사용)
+        // RestTemplate은 바디(Body)에 MultiValueMap 타입의 객체가 들어오면, "아! 이걸 폼 데이터(key=value) 형식으로 변환해서 보내야겠구나"라고 인식하고 자동으로 변환
+        MultiValueMap<String, String> tokenParams = new LinkedMultiValueMap<>();
+        tokenParams.add("grant_type", "authorization_code");
+        tokenParams.add("client_id", kakao_client_id);
+        tokenParams.add("redirect_uri", "http://localhost:8080/user/kakao");
+        tokenParams.add("code", code);
+        // !!! 시크릿키 비활성화 했을 경우 !!!
+        tokenParams.add("client_secret", "AhbShsedonaVOqoMyRgl0sjX6ZXNsbHU");
+
+        // 2-3. 헤더 + 바디 결합
+        HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(tokenParams, tokenHeaders);
+
+        // 2-4. 요청 및 응답 받기
+        ResponseEntity<UserResponse.OAuthToken> tokenResponse = tokenRt.exchange(
+                "https://kauth.kakao.com/oauth/token",
+                HttpMethod.POST,
+                tokenRequest,
+                UserResponse.OAuthToken.class
+        );
+
+        UserResponse.OAuthToken oauthToken = tokenResponse.getBody();
+        System.out.println("2. Access Token 발급 완료: " + oauthToken.getAccessToken());
+
+        // -----------------------------------------------------------
+        // 3. 사용자 정보 요청 (POST: https://kapi.kakao.com/v2/user/me)
+        // -----------------------------------------------------------
+        RestTemplate profileRt = new RestTemplate();
+
+        // 3-1. 헤더 생성 (Bearer + Access Token)
+        HttpHeaders profileHeaders = new HttpHeaders();
+        profileHeaders.add("Authorization", "Bearer " + oauthToken.getAccessToken());
+        profileHeaders.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+
+        // 3-2. 요청 엔티티 생성 (바디 없음)
+        HttpEntity<Void> profileRequest = new HttpEntity<>(profileHeaders);
+
+        // 3-3. 요청 및 응답 받기
+        ResponseEntity<UserResponse.KakaoProfile> profileResponse = profileRt.exchange(
+                "https://kapi.kakao.com/v2/user/me",
+                HttpMethod.POST,
+                profileRequest,
+                UserResponse.KakaoProfile.class
+        );
+
+        UserResponse.KakaoProfile kakaoProfile = profileResponse.getBody();
+        System.out.println("3. 카카오 프로필 정보 수신 완료: " + kakaoProfile);
+
+        // -----------------------------------------------------------
+        // 4. 강제 회원가입 및 로그인 처리
+        // -----------------------------------------------------------
+
+        // 4-1. 고유한 username 생성 (중복 방지용: 닉네임_카카오ID)
+        String username = kakaoProfile.getProperties().getNickname() + "_" + kakaoProfile.getId();
+        System.out.println("4. 고유한 username : " + username);
+
+        // 4-2. 회원 가입 여부 확인 (UserService 활용)
+        User userOrigin = userService.사용자이름조회(username);
+
+        if (userOrigin == null) {
+            System.out.println("4. 기존 회원이 아니므로 자동 회원가입을 진행합니다.");
+
+            // 회원가입용 엔티티 생성
+            User newUser = User.builder()
+                    .username(username)
+                    .password(tencoKey) // 임시 비밀번호 (DB Not Null 제약 대응)
+                    .email(username + "@kakao.com") // 임의의 이메일 (선택사항)
+                    .provider(OAuthProvider.KAKAO) // ★ 로그인 경로 설정
+                    .build();
+
+            // 프로필 이미지가 있다면 설정
+            String profileImage = kakaoProfile.getProperties().getThumbnailImage();
+            if (profileImage != null && !profileImage.isEmpty()) {
+                newUser.setProfileImage(profileImage); // URL 그대로 저장 (외부 링크)
+            }
+
+            userService.소셜회원가입(newUser);
+            userOrigin = newUser; // !! 필수
+        } else {
+            System.out.println("4. 이미 가입된 회원입니다. 로그인을 진행합니다.");
+        }
+
+        // 4-3. 세션 등록 (로그인 처리)
+        session.setAttribute("sessionUser", userOrigin);
+
+        return "redirect:/";
+    }
+
+//
+//    @GetMapping("/user/kakao")
+//    @ResponseBody
+//    public String kakaoCallbackCode(@RequestParam(name = "code") String code) {
+//        // /user/kakao - 로그인 인터셉터 제외 처리
+//        String authorize_code = code;
+//        // 1. 인가 코드 확인 (디버깅용)
+//        System.out.println("1. Kakao 인가 코드 수신 완료: " + code);
+//        // -----------------------------------------------------------
+//        // 2. 토큰 발급 요청 (POST: https://kauth.kakao.com/oauth/token)
+//        // -----------------------------------------------------------
+//        RestTemplate tokenRt = new RestTemplate();
+//        // 2-1. 헤더 생성 (MIME 타입 설정)
+//        HttpHeaders tokenHeaders = new HttpHeaders();
+//        tokenHeaders.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+//        // application/x-www-form-urlencoded 것은 데이터를 key1=value1&key2=value2 형태(HTML Form 태그 방식)로 보내겠다 의미 입니다.
+//
+//        // 2-2. 바디 생성 (MultiValueMap 사용)
+//        // RestTemplate은 바디(Body)에 MultiValueMap 타입의 객체가 들어오면, "아! 이걸 폼 데이터(key=value) 형식으로 변환해서 보내야겠구나"라고 인식하고 자동으로 변환
+//        MultiValueMap<String, String> tokenParams = new LinkedMultiValueMap<>();
+//        tokenParams.add("grant_type", "authorization_code");
+//        tokenParams.add("client_id", kakao_client_id);
+//        tokenParams.add("redirect_uri", "http://localhost:8080/user/kakao");
+//        tokenParams.add("code", code);
+//        // 시크릿키 비활성화 했을 경우
+//        tokenParams.add("client_secret", "AhbShsedonaVOqoMyRgl0sjX6ZXNsbHU");
+//
+//        // 2-3. 헤더 + 바디 결합
+//        HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(tokenParams, tokenHeaders);
+//
+//        // 2-4. 요청 및 응답 받기 (카카오 서비스 서버에 요청>
+//        ResponseEntity<String> tokenResponse = tokenRt.exchange(
+//                "https://kauth.kakao.com/oauth/token",
+//                HttpMethod.POST,
+//                tokenRequest,
+//                String.class
+//        );
+//
+//        String jsonBody = tokenResponse.getBody();
+//
+//        try {
+//            // 3. JSON 문자열을 JsonNode 트리 구조로 변환
+//            JsonNode jsonNode = objectMapper.readTree(jsonBody);
+//
+//            // 4. 값 추출 (필드명으로 찾아서 문자열로 반환)
+//            String tokenType = jsonNode.get("token_type").asText();
+//            String accessToken = jsonNode.get("access_token").asText();
+//
+//            // 5. 출력 확인
+//            System.out.println("토큰 타입: " + tokenType);
+//            System.out.println("액세스 토큰: " + accessToken);
+//
+//
+//
+//        } catch (JsonProcessingException e) {
+//            e.printStackTrace(); // 파싱 중 에러 처리
+//        }
+//        return tokenResponse.toString();
+//     }
 
     /**
      * 회원정보 보기 화면 요청
