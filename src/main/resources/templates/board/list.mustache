@@ -1,0 +1,84 @@
+{{> layout/header}}
+
+<div class="container p-5">
+
+    <!-- 검색 폼 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="/board/list" method="GET" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" 
+                           class="form-control" 
+                           name="keyword" 
+                           placeholder="제목 또는 내용으로 검색..." 
+                           value="{{#keyword}}{{keyword}}{{/keyword}}">
+                </div>
+                <div class="col-md-2">
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="size" value="{{boardPage.size}}">
+                    <button type="submit" class="btn btn-primary w-100">검색</button>
+                </div>
+                <div class="col-md-2">
+                    <a href="/board/list" class="btn btn-secondary w-100">초기화</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{#boardPage.content}}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h4 class="card-title mb-3">{{title}}</h4>
+                <p class="text-muted">
+                    작성자: {{username}} | 작성일: {{createdAt}}
+                </p>
+                <a href="/board/{{id}}" class="btn btn-primary">상세보기</a>
+            </div>
+        </div>
+    {{/boardPage.content}}
+
+    {{^boardPage.content}}
+        <div class="text-center mt-5">
+            <h5>등록된 게시글이 없습니다</h5>
+            <p class="text-muted">첫 번째 게시글을 작성해보세요!</p>
+            <a href="/board/save" class="btn btn-primary">새글쓰기</a>
+        </div>
+    {{/boardPage.content}}
+
+    <!-- 페이지 네비게이션 -->
+    <ul class="pagination d-flex justify-content-center">
+        <!-- 이전 페이지 버튼 -->
+        {{#boardPage.previousPageNumber}}
+            <li class="page-item">
+                <a class="page-link" href="/board/list?page={{boardPage.previousPageNumber}}&size={{boardPage.size}}{{#keyword}}&keyword={{keyword}}{{/keyword}}">Previous</a>
+            </li>
+        {{/boardPage.previousPageNumber}}
+        {{^boardPage.previousPageNumber}}
+            <li class="page-item disabled">
+                <a class="page-link" href="#">Previous</a>
+            </li>
+        {{/boardPage.previousPageNumber}}
+
+        <!-- 페이지 번호 -->
+        {{#boardPage.pageLinks}}
+            <li class="page-item {{#active}}active{{/active}}">
+                <a class="page-link" href="/board/list?page={{displayNumber}}&size={{boardPage.size}}{{#keyword}}&keyword={{keyword}}{{/keyword}}">{{displayNumber}}</a>
+            </li>
+        {{/boardPage.pageLinks}}
+
+        <!-- 다음 페이지 버튼 -->
+        {{#boardPage.nextPageNumber}}
+            <li class="page-item">
+                <a class="page-link" href="/board/list?page={{boardPage.nextPageNumber}}&size={{boardPage.size}}{{#keyword}}&keyword={{keyword}}{{/keyword}}">Next</a>
+            </li>
+        {{/boardPage.nextPageNumber}}
+        {{^boardPage.nextPageNumber}}
+            <li class="page-item disabled">
+                <a class="page-link" href="#">Next</a>
+            </li>
+        {{/boardPage.nextPageNumber}}
+    </ul>
+
+</div>
+
+{{> layout/footer}}

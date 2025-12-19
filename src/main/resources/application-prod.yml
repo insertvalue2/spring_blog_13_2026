@@ -1,0 +1,15 @@
+spring:
+  mustache:
+    suffix: .mustache
+    prefix: classpath:/templates/
+    servlet:
+      cache: false
+    charset: UTF-8
+
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.web: DEBUG

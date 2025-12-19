@@ -1,0 +1,62 @@
+{{> layout/header}}
+<div class="container p-5">
+
+    <div class="card">
+        <div class="card-header"><b>회원정보 수정</b></div>
+        <div class="card-body">
+            <!-- 프로필 이미지 표시 -->
+            <div class="text-center mb-4">
+                {{#user.profileImage}}
+                    <img src="/images/{{user.profileImage}}" 
+                         alt="프로필 사진" 
+                         class="rounded-circle" 
+                         style="width: 150px; height: 150px; object-fit: cover;">
+                {{/user.profileImage}}
+                {{^user.profileImage}}
+                    <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center" 
+                         style="width: 150px; height: 150px;">
+                        <span class="text-white">프로필 사진 없음</span>
+                    </div>
+                {{/user.profileImage}}
+            </div>
+
+            <!-- 
+                ⭐ 파일 업로드를 위한 form 태그 설정
+                - enctype="multipart/form-data": 파일 전송 시 필수!
+            -->
+            <form action="/user/update" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label">사용자명</label>
+                    <input type="text" class="form-control" name="username" value="{{user.username}}" readonly>
+                    <small class="form-text text-muted">사용자명은 변경할 수 없습니다</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">비밀번호</label>
+                    <input type="password" class="form-control" placeholder="새 비밀번호를 입력하세요" name="password" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">이메일</label>
+                    <input type="email" class="form-control" name="email" value="{{user.email}}" readonly>
+                    <small class="form-text text-muted">이메일은 변경할 수 없습니다</small>
+                </div>
+                <!-- 
+                    ⭐ 프로필 이미지 변경 (선택사항)
+                    - 새 이미지를 업로드하지 않으면 기존 이미지가 유지됩니다
+                    - 새 이미지를 업로드하면 기존 이미지는 자동으로 삭제됩니다
+                -->
+                <div class="mb-3">
+                    <label for="profileImage" class="form-label">프로필 사진 변경 (선택사항)</label>
+                    <input type="file" class="form-control" id="profileImage" name="profileImage" accept="image/*">
+                    <small class="form-text text-muted">이미지 파일만 업로드 가능합니다 (JPG, PNG, GIF 등)</small>
+                    <small class="form-text text-muted d-block mt-1">💡 새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.</small>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">회원정보 수정</button>
+                    <a href="/user/detail" class="btn btn-secondary">취소</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{> layout/footer}}

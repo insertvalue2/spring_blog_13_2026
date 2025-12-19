@@ -1,0 +1,31 @@
+{{> layout/header}}
+
+<div class="container p-5">
+    <div class="card">
+        <div class="card-header"><b>글쓰기 화면입니다</b></div>
+        <div class="card-body">
+            <!--
+            action="/board/save": 폼 제출시 /board/save 경로로 요청
+            method="post": HTTP POST 방식으로 데이터 전송
+            GET: URL에 데이터 노출, POST: 요청 본문에 데이터 숨김
+            -->
+            <form action="/board/save" method="post">
+                <!--
+                name 속성: 서버에서 받을 때 사용하는 변수명
+                name="username" → 컨트롤러에서 String username으로 받음
+                -->
+                <div class="mb-3">
+                    <input type="text" class="form-control" placeholder="Enter title" name="title">
+                </div>
+                <div class="mb-3">
+                    <!-- textarea: 여러 줄 텍스트 입력 가능 -->
+                    <textarea class="form-control" rows="5" name="content"></textarea>
+                </div>
+                <!-- 버튼 클릭시 폼이 제출됨 -->
+                <button class="btn btn-primary form-control">글쓰기완료</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{> layout/footer}}

@@ -1,0 +1,76 @@
+server:
+  servlet:
+    encoding:
+      charset: utf-8
+      force: true
+  port: 8080
+
+# 2칸 공백, 탭키 절대 사용 금지!
+# 로그 설정 (개발환경용)
+# 로그 레벨의 개념
+# ERROR > WARN > INFO > DEBUG > TRACE
+logging:
+  level:
+    root: INFO           # 모든 라이브러리는 INFO 이상만 출력
+    com.example: DEBUG   # 내 프로젝트는 DEBUG 이상 모두 출력
+
+spring:
+
+  # 데이터베이스 연결 설정 (H2 인메모리 데이터베이스)
+  datasource:
+    driver-class-name: org.h2.Driver
+    # MODE=MySQL: H2를 MySQL 호환 모드로 실행
+    # DATABASE_TO_UPPER=false: 한글 처리 개선 (대소문자 변환 방지)
+    # DB_CLOSE_DELAY=-1: 연결이 닫혀도 데이터 유지
+    url: jdbc:h2:mem:test;MODE=MySQL;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+
+  # H2 데이터베이스 웹 콘솔 활성화 (개발용)
+  # localhost:8080/h2-console로 접속 가능
+  h2:
+    console:
+      enabled: true
+
+  # 초기 데이터 로딩 설정
+  sql:
+    init:
+      # 2.5 이상 버전부터 명시를 해야 insert 처리 됨
+      mode: always
+      # 애플리케이션 시작시 실행할 SQL 파일 위치
+      data-locations:
+        - classpath:db/data.sql
+      # SQL 파일 인코딩 설정 (한글 깨짐 방지)
+      encoding: UTF-8
+
+  # JPA 설정
+  jpa:
+    # Open Session in View (OSIV) 설정
+    # false: 트랜잭션 종료 시 세션 종료 (권장)
+    # true: 뷰 렌더링까지 세션 유지 (기본값, 비권장)
+    # OSIV false일 때는 Service에서 필요한 데이터를 모두 조회하고 DTO로 변환하여 반환해야 함
+    open-in-view: false
+    hibernate:
+      # create: 애플리케이션 시작시 테이블을 새로 생성
+      # 기존 데이터는 모두 삭제됨 (개발용)
+      ddl-auto: create
+    # SQL 쿼리를 콘솔에 출력 (개발용 디버깅)
+    show-sql: true
+    properties:
+      hibernate:
+        # SQL 쿼리를 보기 좋게 포맷팅
+        format_sql: true
+        # N+1 문제 해결: LAZY 로딩 시 연관된 엔티티를 배치로 한 번에 가져오기
+        # 예: 게시글 목록 조회 시 각 게시글의 작성자(User)를 개별 쿼리로 가져오는 대신
+        #     배치로 묶어서 한 번에 가져옴 (IN 쿼리 사용)
+        default_batch_fetch_size: 100
+    # data.sql 파일을 Hibernate 초기화 이후에 실행
+    defer-datasource-initialization: true
+
+  # 파일 업로드 설정
+  servlet:
+    multipart:
+      enabled: true                    # 파일 업로드 활성화
+      max-file-size: 10MB              # 개별 파일 최대 크기 (10MB)
+      max-request-size: 10MB           # 전체 요청 최대 크기 (10MB)
+      file-size-threshold: 2KB         # 메모리에 저장할 임계값 (2KB 이상이면 디스크에 저장)
